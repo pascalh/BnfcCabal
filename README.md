@@ -18,28 +18,28 @@ Further informations and sources can be found at:
 
 http://www.cse.chalmers.se/research/group/Language-technology/BNFC/
 
-Bnfc has to be installed in order to use cabalbnfc.
+Bnfc has to be installed in order to use bnfcCabal.
 
-## 1.2) CabalBnfc
+## 1.2) BnfcCabal
 
-CabalBnfc is a cabal file creating tool for labeled BNF grammars of 
-file extension *.cf. CabalBnfc runs bnfc on a given labeled grammar
+BnfcCabal is a cabal file creating tool for labeled BNF grammars of 
+file extension *.cf. BnfcCabal runs bnfc on a given labeled grammar
 and automatically builds a cabal file containing all modules bnfc 
 produces. 
 
-# 2) Installing CabalBnfc
+# 2) Installing BnfcCabal
 
-CabalBnfc can be installed using 
+BnfcCabal can be installed using 
 
-> cabal install cabalBnfc
+> cabal install bnfcCabal
 
-# 3) Using CabalBnfc
+# 3) Using BnfcCabal
 
 ## 3.1) How to build a cabal file for your own grammar
 
 1. Create a labeled grammar like "mygrammar.cf" 
 
-2. Launch `cabalBnfc mygrammar.cf`
+2. Launch `bnfcCabal mygrammar.cf`
   
 3. Type `cabal install` in order to install the bnfc modules
 
@@ -47,7 +47,7 @@ CabalBnfc can be installed using
     
 1. Grammar "Examples/c.cf" is already existing
 2. Chane to directory Examples 
-3. Type `cabalBnfc c.cf` to build a cabal file for c grammar
+3. Type `bnfcCabal c.cf` to build a cabal file for c grammar
 4. To install grammar type `cabal install` 
     
 See Section (3.3) how to use installed modules
@@ -63,17 +63,17 @@ mygrammar some modules have to be imported:
     import Language.Mygrammar.Absmygrammar
     import Language.Mygrammar.ErrM
 
-Module ErrM contains a error monad to handle parse errors. 
-Absmygrammar offers data types to represent parsed data in haskell.
-Module Parmygrammar contains lexer and parse functions. The lexer 
-function is always named myLexer, but the parsing function is named
-after the root of your grammar. Assume data type Myroot is the root of
+Module `ErrM` contains a error monad to handle parse errors. 
+`Absmygrammar` offers types for the abstract syntax.
+Module `Parmygrammar` contains lexer and parse functions. The lexer 
+function is always named `myLexer`, but the parsing function is named
+after the root of your grammar. Assume data type `Myroot` is the root of
  mygrammar. The function
 
     (pMyroot . myLexer) :: String -> Err Root
 
 is the correct parsing function for mygrammar. Have a look at module
-Language.Mygrammar.ErrM to get an impression of the error monad.
+`Language.Mygrammar.ErrM` to get an impression of the error monad.
 
 # 4) To Do
     
