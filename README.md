@@ -37,30 +37,30 @@ CabalBnfc can be installed using
 
 ## 3.1) How to build a cabal file for your own grammar
 
-    1) Create a labeled grammar like "mygrammar.cf" 
+    1. Create a labeled grammar like "mygrammar.cf" 
 
-    2) Launch 
+    2. Launch 
          > cabalBnfc mygrammar.cf 
   
-    3) Type 
+    3. Type 
          > cabal install 
        in order to install the bnfc modules
 
 
 ## 3.2) Example: How to build the c grammar?
     
-    1) Grammar "Examples/c.cf" is already existing
+    1. Grammar "Examples/c.cf" is already existing
     
-    2) Chane to directory Examples 
+    2. Chane to directory Examples 
   
-    3) Type 
+    3. Type 
          > cabalBnfc c.cf
        to build a cabal file for c grammar
     
-    4) To install grammar type 
+    4. To install grammar type 
          > cabal install 
     
-    See Section (3.4) how to use installed modules
+    See Section (3.3) how to use installed modules
 
 ## 3.3) Using installed modules
 
