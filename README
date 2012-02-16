@@ -35,17 +35,7 @@ CabalBnfc can be installed using
 
 3) Using CabalBnfc
 
-3.1) Setting up CabalBnfc
-
-We parse a skeleton cabal file which is located at 
-
-  .cabal/share/cabalBnfc/data/Skeleton.cabal 
-
-In order to customize the grammars cabal file, you can
-modify Skeleton.cabal. Notice that cabalBnfc overrides
-package name and the libary informations.
-
-3.2) How to build a cabal file for your own grammar
+3.1) How to build a cabal file for your own grammar
 
     1) Create a labeled grammar like "mygrammar.cf" 
 
@@ -57,7 +47,7 @@ package name and the libary informations.
        in order to install the bnfc modules
 
 
-3.3) Example: How to build the c grammar?
+3.2) Example: How to build the c grammar?
     
     1) Grammar "Examples/c.cf" is already existing
     
@@ -72,16 +62,18 @@ package name and the libary informations.
     
     See Section (3.4) how to use installed modules
 
-3.4) Using installed modules
+3.3) Using installed modules
 
 The modules of a grammar "mygrammar" can be found at 
 Language.Mygrammar. We use a grammar named "mygrammar" as a 
 running example in this section. In order to use the parser of 
 mygrammar some modules have to be imported:
 
+```haskell
     import Language.Mygrammar.Parmygrammar
     import Language.Mygrammar.Absmygrammar
     import Language.Mygrammar.ErrM
+```
 
 Module ErrM contains a error monad to handle parse errors. 
 Absmygrammar offers data types to represent parsed data in haskell.
