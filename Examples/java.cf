@@ -1,0 +1,965 @@
+{-
+	LNBF Java 1.5 Grammar
+	extracted form the Java Language Specification Rev.3
+	http://java.sun.com/docs/books/jls/third_edition/html/j3TOC.html
+	
+	Alpha 0.4.1
+	Written by Tristan Skudlik
+        (send bug-reports to tristan@udo.cs.uni-dortmund.de)    
+    
+    Allready working:
+        - packeges
+        - imports
+        - classes & interfaces
+        - typedeclarations
+        - arrays (mostly)
+        - comments (at least when there are no instructions between two multiline comments)
+        - literals
+        - identifiers
+        - typenames
+        - annotations (at least the simple ones)
+        - statements (mostly)
+        - expressions (mostly)
+        - methoddeclarations
+        - methodcalls
+        - generics (mostly)
+        - exceptions (mostly)
+        (mostly means here: many possible cases are not tested yet but should work anyway)
+        
+	ToDo:
+        - fix Name<Name<Name>> generics
+        - discriminate between simple and dot-separated names
+        - enable not-simple Annotations
+        - write new rules for comments in order to use more than one multiline comment
+        - eliminate shift/reduce conflicts [21] (maybe some of them can't be fixed, othes may need rewriting of rules)
+        - don't let the grammar accept garbage code eg. in class declarations (looks like a lot of work to me) [not that important now]
+        - do not accept multiple Annotations where only one is allowed [not that important now]
+
+    WontFix:
+        - bad lable names (so no other Language than haskell can be used)
+        - remove unused terminal symbol "L_err"
+
+
+--- BNFC Warnings: ---
+
+Warning :
+  Bad Label name in Category(s) :HexalNumeral OctalNumeral FloatingPointLiteral CharacterLiteral Wildcard VariableDeclaratorId ClassBody VariableDeclarator MethodDeclaration LastFormalParameter MethodBody Block ExclusiveOrExpression InclusiveOrExpression ConditionalAndExpression ConditionalOrExpression AssignmentExpression
+  These categories have more than one Label, yet one of these
+  Labels has the same name as the Category. This will almost
+  certainly cause problems in languages other than Haskell.
+
+-}
+
+
+-- Entrypoints
+----------------------------------------------------------------
+
+entrypoints CompilationUnit; --a complete java-program
+
+
+{- for testing purposes only -}
+-- BEWARE: multiple entrypoints doesn't work in the expected way (if the first one is not found nothing can be parsed)
+--entrypoints TypeDeclarations, ClassDeclaration, InterfaceDeclaration, Type, Annotations, Expressions, Block, Statements ;
+
+
+-- Lexical Structure
+-- http://java.sun.com/docs/books/jls/third_edition/html/lexical.html
+----------------------------------------------------------------
+
+--identifiers
+Identifier.                     Identifier ::= Ident ;
+--QualifiedIdentifierSingle.      QualifiedIdentifier ::= Identifier ;
+--QualifiedIdentifierMulti.       QualifiedIdentifier ::= QualifiedIdentifier "." Identifier ;
+
+
+--comments
+
+--comment "/**" "**/" ; -- bnfc/haskell don't like those
+comment "/*" "*/" ;
+comment "//";
+
+LiteralInteger.                 Literal ::= IntegerLiteral ;
+LiteralFloat.                   Literal ::= FloatingPointLiteral ;
+LiteralChar.                    Literal ::= CharacterLiteral ;
+LiteralString.                  Literal ::= StringLiteral ;
+LiteralBool.                    Literal ::= BooleanLiteral ;
+LiteralNull.                    Literal ::= NullLiteral ;
+
+IntegerLiteralDecimal.          IntegerLiteral ::= DecimalNumeral ;
+IntegerLiteralHexal.            IntegerLiteral ::= HexalNumeral ;
+IntegerLiteralOctal.            IntegerLiteral ::= OctalNumeral ;
+
+DecimalNumeralSimple.           DecimalNumeral ::= SimpleInteger ;
+DecimalNumeralUnsigned.	        DecimalNumeral ::= Unsigned ;
+DecimalNumeralLong.	            DecimalNumeral ::= Long ;
+DecimalNumeralUnsignedLong.	    DecimalNumeral ::= UnsignedLong ;
+
+HexalNumeral.                   HexalNumeral ::= Hexadecimal ;
+HexalNumeralUnsigned.           HexalNumeral ::= HexUnsigned ;
+HexalNumeralLong.               HexalNumeral ::= HexLong ;
+HexalNumeralUnsignedLong.       HexalNumeral ::= HexUnsLong ;
+
+OctalNumeral.                   OctalNumeral ::= Octal ;
+OctalNumeralUnsigned.           OctalNumeral ::= OctalUnsigned ;
+OctalNumeralLong.               OctalNumeral ::= OctalLong ;
+OctalNumeralUnsignedLong.       OctalNumeral ::= OctalUnsLong ;
+
+FloatingPointLiteral.           FloatingPointLiteral ::= JFloat ;
+FloatingPointLiteralDouble.     FloatingPointLiteral ::= JDouble ;
+FloatingPointLiteralLongDouble. FloatingPointLiteral ::= JLongDouble ;
+FloatingPointLiteralSimple.     FloatingPointLiteral ::= SimpleFloatOrDouble ;
+
+CharacterLiteral.               CharacterLiteral ::= JChar ;
+CharacterLiteralUnicode.        CharacterLiteral ::= UnicodeChar ;
+
+StringLiteral.                  StringLiteral ::= String ;
+
+BooleanLiteralTrue.             BooleanLiteral ::= "true" ;
+BooleanLiteralFalse.            BooleanLiteral ::= "false" ;
+
+NullLiteral.                    NullLiteral ::= "null" ;
+SimpleInteger.                  SimpleInteger ::= Integer ;
+SimpleFloatOrDouble.            SimpleFloatOrDouble ::= Double ;
+
+token Unsigned ["123456789"] digit * ('u'|'U');
+token Long ["123456789"] digit * ('l'|'L');
+token UnsignedLong ["123456789"] digit * (('u''l')|('U''L'));
+token Hexadecimal '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+;
+token HexUnsigned '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+ ('u'|'U');
+token HexLong '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+ ('l'|'L');
+token HexUnsLong '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+ (('u''l')|('U''L'));
+token Octal '0'["01234567"]*;  --funny side-effect: all zero Numerals "0" are treated as Octal 
+token OctalUnsigned '0'["01234567"]*('u'|'U');
+token OctalLong '0'["01234567"]* ('l'|'L');
+token OctalUnsLong '0'["01234567"]* (('u''l')|('U''L'));
+token JDouble (((digit+ '.')|('.' digit+))(('e'|'E') ('-')? digit+)?)|(digit+ ('e'|'E') ('-')? digit+)|(digit+ '.' digit+ 'E' ('-')? digit+);
+token JFloat (((digit+ '.' digit+)|(digit+ '.')|('.' digit+))(('e'|'E')('-')? digit+)?('f'|'F'))|((digit+ ('e'|'E')('-')? digit+)('f'|'F'));
+token JLongDouble (((digit+ '.' digit+)|(digit+ '.')|('.' digit+))(('e'|'E')('-')?digit+)?('l'|'L'))|((digit+ ('e'|'E')('-')? digit+)('l'|'L'));
+token JChar '\'' ((char - ["'\\"]) | ('\\' ["'\\ntr"])) '\'';
+token UnicodeChar '\'' '\\' 'u' (digit | ["abcdef"] | ["ABCDEF"]) (digit | ["abcdef"] | ["ABCDEF"]) (digit | ["abcdef"] | ["ABCDEF"]) (digit | ["abcdef"] | ["ABCDEF"]) '\'';
+
+AssignmentSimple.               AssignmentOperator ::= "=" ;
+AssignmentAdd.                  AssignmentOperator ::= "+=" ;
+AssignmentSub.                  AssignmentOperator ::= "-=" ;
+AssignmentMul.                  AssignmentOperator ::= "*=" ;
+AssignmentDiv.                  AssignmentOperator ::= "/=" ;
+AssignmentAnd.                  AssignmentOperator ::= "&=" ;
+AssignmentXor.                  AssignmentOperator ::= "|=" ;
+AssignmentOr.                   AssignmentOperator ::= "^=" ;
+AssignmentMod.                  AssignmentOperator ::= "%=" ;
+AssignmentShiftLeft.            AssignmentOperator ::= "<<=" ;
+AssignmentShiftRight.           AssignmentOperator ::= ">>=" ;
+AssignmentUnsigndShift.         AssignmentOperator ::= ">>>=" ;
+
+--modifiers
+{- These will replace all special -modifier tokens (eg. MethodModifiers).
+ - by doing this many reduce/reduce conflicts disappear (which is good)
+ - another effect of this replacement is that now the grammar accepts garbage-code
+ - like: "public abstract protected strictfp native final private class Garbage {...}"
+ - (which is not so good...)
+ - but syntactic correct code will be accepted like before.
+ - maybe this should be fixed for more detailed syntax-trees - maybe not, because
+ - more code can be parsed this way -}
+
+ModifiersSingle.        Modifiers ::= Modifier ;
+ModifiersMulti.         Modifiers ::= Modifiers Modifier ;
+
+ModifierStatic.         Modifier ::= "static" ;
+ModifierFinal.          Modifier ::= "final" ;
+ModifierStrictfp.       Modifier ::= "strictfp" ;
+ModifierPublic.         Modifier ::= "public" ;
+ModifierProtected.      Modifier ::= "protected" ;
+ModifierPrivate.        Modifier ::= "private" ;
+ModifierTransient.      Modifier ::= "transient" ;
+ModifierVolatile.       Modifier ::= "volatile" ;
+ModifierAbstact.        Modifier ::= "abstract" ;
+ModifierSynchronized.   Modifier ::= "synchronized" ;
+ModifierNative.         Modifier ::= "native" ;
+
+
+-- Types, Values and Variables
+-- http://java.sun.com/docs/books/jls/third_edition/html/typesValues.html
+----------------------------------------------------------------
+
+--TypePrimitive.      Type ::= PrimitiveType ;
+--TypeReference.      Type ::= ReferenceType ;
+
+--PrimitiveTypeNumeric.    PrimitiveType ::= NumericType ;
+
+PrimitiveTypeBool.       PrimitiveType ::= "boolean" ;
+
+PrimitiveTypeByte.       PrimitiveType ::= "byte" ;
+PrimitiveTypeShort.      PrimitiveType ::= "short" ;
+PrimitiveTypeInt.        PrimitiveType ::= "int" ;
+PrimitiveTypeLong.       PrimitiveType ::= "long" ;
+PrimitiveTypeChar.       PrimitiveType ::= "char" ;
+PrimitiveTypeFloat.      PrimitiveType ::= "float" ;
+PrimitiveTypeDouble.     PrimitiveType ::= "double" ;
+
+{- maybe these should be used for a bit more detailed ASTs
+NumericTypeIntegral.    NumericType ::= IntegralType ;
+NumericTypeFloating.    NumericType ::= FloatingPointType ;
+
+IntegralTypeByte.       IntegralType ::= "byte" ;
+IntegralTypeShort.      IntegralType ::= "short" ;
+IntegralTypeInt.        IntegralType ::= "int" ;
+IntegralTypeLong.       IntegralType ::= "long" ;
+IntegralTypeChar.       IntegralType ::= "char" ;
+
+FloatingPointTypeSingle.    FloatingPointType ::= "float" ;
+FloatingPointTypeDouble.    FloatingPointType ::= "double" ;
+-}
+
+--ReferenceTypeClass.     ReferenceType ::= ClassOrInterfaceType ; --moved into "Names" Section
+ReferenceTypeArray.         ReferenceType ::= ArrayType ;
+--ReferenceTypeGeneric.       ReferenceType ::= Identifier TypeParameters ; --ClassType can also handle generics
+
+--ClassOrInterfaceTypeSimple.            ClassOrInterfaceType ::= TypeDeclSpecifier ; --moved into "Names" Section
+ClassOrInterfaceTypeWithTypeArgs.      ClassOrInterfaceType ::= TypeDeclSpecifier TypeArguments ;
+
+ArrayTypePrimitive.                      ArrayType ::= PrimitiveType Dims ;
+ArrayTypeReference.                      ArrayType ::= ReferenceType Dims ;
+
+TypeParameterSimple.    TypeParameter ::= ClassOrInterfaceType ; 
+TypeParameterWithBound. TypeParameter ::= ClassOrInterfaceType TypeBound ;
+
+TypeBoundSimple.        TypeBound ::= "extends" ClassOrInterfaceType ;
+TypeBoundList.          TypeBound ::= "extends" ClassOrInterfaceType AdditionalBoundList ;
+
+AdditionalBoundListMulti.      AdditionalBoundList ::= AdditionalBound AdditionalBoundList ;
+AdditionalBoundListSingle.     AdditionalBoundList ::= AdditionalBound ;
+
+AdditionalBound.               AdditionalBound ::= "&" InterfaceType ;
+
+TypeArgumentsSimple.           TypeArguments ::= "<" [ActualTypeArgument] ">" ;
+TypeArgumentsRecursive.        TypeArguments ::= "<" ActualTypeArgument TypeArguments ">" ;
+
+--ActualTypeArgumentListSingle.   ActualTypeArgumentList ::= ActualTypeArgument ;
+--ActualTypeArgumentListMulti.    ActualTypeArgumentList ::= ActualTypeArgumentList "," ActualTypeArgument ;
+
+ActualTypeArgumentReference.    ActualTypeArgument ::= ClassType ;
+ActualTypeArgumentWildcard.     ActualTypeArgument ::= Wildcard ;
+
+separator nonempty ActualTypeArgument "," ;
+
+Wildcard.                       Wildcard ::= "?" ;
+WildcardWithBound.              Wildcard ::= "?" WildcardBounds ;
+
+WildcardBoundsExtends.          WildcardBounds ::= "extends" ReferenceType ;
+WildcardBoundsSuper.            WildcardBounds ::= "super" ReferenceType ;
+
+
+-- Names
+-- http://java.sun.com/docs/books/jls/third_edition/html/names.html
+----------------------------------------------------------------
+
+-- .-separated names
+ReferenceTypeClass.             ReferenceType ::= MethodName ;
+MethodName.                     MethodName ::= PackageOrTypeName ;
+PackageOrTypeName.              PackageOrTypeName ::= PackageName ;
+PackageName.                    PackageName ::= ExpressionName ;
+ExpressionName.                 ExpressionName ::= ClassOrInterfaceType ;
+ClassOrInterfaceTypeSimple.     ClassOrInterfaceType ::= TypeDeclSpecifier ;
+
+TypeDeclSpecifier.              TypeDeclSpecifier ::= TypeName ;
+TypeNameSingle.                 TypeName ::= TypeVariable ;
+
+
+-- simple names
+TypeVariable.                   TypeVariable ::= VariableDeclaratorId ;
+VariableDeclaratorId.           VariableDeclaratorId ::= EnumConstantName ;
+EnumConstantName.               EnumConstantName ::= [Identifier] ;
+
+separator nonempty Identifier "." ;
+
+
+-- Packages
+-- http://java.sun.com/docs/books/jls/third_edition/html/packages.html
+----------------------------------------------------------------
+
+
+--CompilationUnitSemicolon.           CompilationUnit ::=  CompilationUnit ";" ;
+CompilationUnitPackage.             CompilationUnit ::= PackageDeclaration  ;
+CompilationUnitImport.              CompilationUnit ::= ImportDeclarations  ;
+CompilationUnitType.                CompilationUnit ::= TypeDeclarations ;
+CompilationUnitPackageImport.       CompilationUnit ::= PackageDeclaration ImportDeclarations  ;
+CompilationUnitPackageType.         CompilationUnit ::= PackageDeclaration TypeDeclarations  ;
+CompilationUnitImportType.          CompilationUnit ::= ImportDeclarations TypeDeclarations  ;
+CompilationUnitPackageImportType.   CompilationUnit ::= PackageDeclaration ImportDeclarations TypeDeclarations ;
+
+ImportDeclarationsSingle.           ImportDeclarations ::= ImportDeclaration ;
+ImportDeclarationsMulti.            ImportDeclarations ::= ImportDeclarations ImportDeclaration ;
+
+TypeDeclarationsSingle.             TypeDeclarations ::= TypeDeclaration ;
+TypeDeclarationsMulti.              TypeDeclarations ::= TypeDeclarations TypeDeclaration ;
+
+PackageDeclarationSimple.           PackageDeclaration ::= "package" PackageName ";" ;
+PackageDeclarationWithAnnotations.  PackageDeclaration ::= Annotations "package" PackageName ";" ;
+
+ImportDeclarationSimple.            ImportDeclaration ::= SingleTypeImportDeclaration ;
+ImportDeclarationOnDemand.          ImportDeclaration ::= TypeImportOnDemandDeclaration ;
+ImportDeclarationSimpleStatic.      ImportDeclaration ::= SingleStaticImportDeclaration ;
+ImportDeclarationOnDemandStatic.    ImportDeclaration ::= StaticImportOnDemandDeclaration ;
+
+SingleTypeImportDeclaration.        SingleTypeImportDeclaration ::= "import" TypeName ";" ;
+TypeImportOnDemandDeclaration.      TypeImportOnDemandDeclaration ::= "import" PackageOrTypeName "." "*" ";" ;
+SingleStaticImportDeclaration.      SingleStaticImportDeclaration ::= "import" "static" TypeName "." Identifier ";" ;
+StaticImportOnDemandDeclaration.    StaticImportOnDemandDeclaration ::= "import" "static" TypeName "." "*" ";" ;
+
+TypeDeclarationClass.               TypeDeclaration ::= ClassDeclaration ;
+TypeDeclarationInterface.           TypeDeclaration ::= InterfaceDeclaration ;
+TypeDeclarationEmpty.               TypeDeclaration ::= ";" ;
+
+
+-- Classes
+-- http://java.sun.com/docs/books/jls/third_edition/html/classes.html
+----------------------------------------------------------------
+
+ClassDeclarationNormal.     ClassDeclaration ::= NormalClassDeclaration ;
+ClassDeclarationEnum.       ClassDeclaration ::= EnumDeclaration ;
+ClassDeclarationAnnotation. ClassDeclaration ::= NormalClassDeclarationWithAnnotation ; --fix reduce/reduce
+
+NormalClassDeclarationWithAnnotation.   NormalClassDeclarationWithAnnotation ::= Annotation NormalClassDeclaration ; 
+NormalClassDeclarationSimple.                               NormalClassDeclaration ::= "class" Identifier ClassBody ;
+NormalClassDeclarationModifier.                             NormalClassDeclaration ::= Modifiers "class" Identifier ClassBody ; 
+NormalClassDeclarationTypeParam.                            NormalClassDeclaration ::= "class" Identifier TypeParameters ClassBody ;
+NormalClassDeclarationSuper.                                NormalClassDeclaration ::= "class" Identifier Super ClassBody ;
+NormalClassDeclarationInterface.                            NormalClassDeclaration ::= "class" Identifier Interfaces ClassBody ;
+NormalClassDeclarationModifierTypeParam.                    NormalClassDeclaration ::= Modifiers "class" Identifier TypeParameters ClassBody ; 
+NormalClassDeclarationModifierSuper.                        NormalClassDeclaration ::= Modifiers "class" Identifier Super ClassBody ; 
+NormalClassDeclarationModifierInterface.                    NormalClassDeclaration ::= Modifiers "class" Identifier Interfaces ClassBody ; 
+NormalClassDeclarationTypeParamSuper.                       NormalClassDeclaration ::= "class" Identifier TypeParameters Super ClassBody ;
+NormalClassDeclarationTypeParamInterface.                   NormalClassDeclaration ::= "class" Identifier TypeParameters Interfaces ClassBody ;
+NormalClassDeclarationSuperInterface.                       NormalClassDeclaration ::= "class" Identifier Super Interfaces ClassBody ;
+NormalClassDeclarationModifierTypeParamSuper.               NormalClassDeclaration ::= Modifiers "class" Identifier TypeParameters Super ClassBody ; 
+NormalClassDeclarationModifierTypeParamInterface.           NormalClassDeclaration ::= Modifiers "class" Identifier TypeParameters Interfaces ClassBody ;
+NormalClassDeclarationModifierSuperInterface.               NormalClassDeclaration ::= Modifiers "class" Identifier Super Interfaces ClassBody ; 
+NormalClassDeclarationTypeParamSuperInterface.              NormalClassDeclaration ::= "class" Identifier TypeParameters Super Interfaces ClassBody ;
+NormalClassDeclarationModifierTypeParamSuperInterface.      NormalClassDeclaration ::= Modifiers "class" Identifier TypeParameters Super Interfaces ClassBody ; 
+
+TypeParametersSimple.                 TypeParameters ::= "<" [TypeParameter] ">" ;
+
+--these are not working as they should do (same for TypeArguments and NonWildcardTypeArguments)
+--TypeParametersRecursive.              TypeParameters ::= "<" TypeVariable TypeParameters ">" ;
+--SimpleTypeParameters.                 SimpleTypeParameters ::= "<" TypeVariable ">" ;
+
+--TypeParameterListMulti.         TypeParameterList ::= TypeParameterList "," TypeParameter ;
+--TypeParameterListSingle.        TypeParameterList ::= TypeParameter ;
+
+separator nonempty TypeParameter "," ;
+
+Super.              Super ::= "extends" ClassType ;
+
+ClassTypeSimple.    ClassType ::= TypeDeclSpecifier ;
+ClassTypeTypeArgs.  ClassType ::= TypeDeclSpecifier TypeArguments ;
+
+Interfaces.         Interfaces ::= "implements" InterfaceTypeList ;
+
+ClassBody.                  ClassBody ::= "{" ClassBodyDeclarations "}" ;
+ClassBodyEmpty.             ClassBody ::= "{" "}" ;
+
+ClassBodyDeclarationsSingle.    ClassBodyDeclarations ::= ClassBodyDeclaration ;
+ClassBodyDeclarationsMulti.     ClassBodyDeclarations ::= ClassBodyDeclarations ClassBodyDeclaration ;
+
+ClassBodyDeclarationMember.     ClassBodyDeclaration ::= ClassMemberDeclaration ;
+ClassBodyDeclarationInstance.   ClassBodyDeclaration ::= InstanceInitializer ;
+ClassBodyDeclarationStatic.     ClassBodyDeclaration ::= StaticInitializer ;
+ClassBodyDeclarationConstuctor. ClassBodyDeclaration ::= ConstructorDeclaration ;
+
+
+ClassMemberDeclarationField.        ClassMemberDeclaration ::= FieldDeclaration ;
+ClassMemberDeclarationMethod.       ClassMemberDeclaration ::= MethodDeclaration ;
+ClassMemberDeclarationClass.        ClassMemberDeclaration ::= ClassDeclaration ;
+ClassMemberDeclarationInterface.    ClassMemberDeclaration ::= InterfaceDeclaration ;
+ClassMemberDeclarationEmpty.        ClassMemberDeclaration ::= ";" ;
+
+FieldDeclarationClassType.              FieldDeclaration ::= ClassType VariableDeclarators ";" ;
+FieldDeclarationPrimitve.               FieldDeclaration ::= PrimitiveType VariableDeclarators ";" ;
+FieldDeclarationClassTypeWithModifier.  FieldDeclaration ::= Modifiers ClassType VariableDeclarators ";" ;
+FieldDeclarationPrimitiveWithModifier.  FieldDeclaration ::= Modifiers PrimitiveType VariableDeclarators ";" ;
+FieldDeclarationWithAnnoataion.         FieldDeclaration ::= Annotation FieldDeclaration ;
+
+VariableDeclaratorsSingle.          VariableDeclarators ::= VariableDeclarator ;
+VariableDeclaratorsMulti.           VariableDeclarators ::= VariableDeclarators "," VariableDeclarator ;
+
+VariableDeclarator.                 VariableDeclarator ::= VariableDeclaratorId ;
+VariableDeclaratorInitialize.       VariableDeclarator ::= VariableDeclaratorId "=" VariableInitializer ;
+
+--VariableDeclaratorId.               VariableDeclaratorId ::= Identifier ; --now moved to Names Section
+VariableDeclaratorIdArray.          VariableDeclaratorId ::= VariableDeclaratorId Dims ;
+
+MethodDeclaration.                  MethodDeclaration ::= MethodHeader MethodBody ;
+MethodDeclarationWithAnnotation.    MethodDeclaration ::= Annotation MethodDeclaration ;
+
+--maybe ClassType is better than ReferenceType
+MethodHeaderVoidSimple.                                 MethodHeader ::= "void" MethodDeclarator ;
+MethodHeaderPrimitiveTypeSimple.                        MethodHeader ::= PrimitiveType MethodDeclarator ;
+MethodHeaderReferenceTypeSimple.                        MethodHeader ::= ClassType MethodDeclarator ;
+MethodHeaderVoidModifier.                               MethodHeader ::= Modifiers "void" MethodDeclarator ;
+MethodHeaderPrimitiveTypeModifier.                      MethodHeader ::= Modifiers PrimitiveType MethodDeclarator ;
+MethodHeaderReferenceTypeModifier.                      MethodHeader ::= Modifiers ClassType MethodDeclarator ;
+MethodHeaderVoidTypeParam.                              MethodHeader ::= TypeParameters "void" MethodDeclarator ;
+MethodHeaderPrimitiveTypeTypeParam.                     MethodHeader ::= TypeParameters PrimitiveType MethodDeclarator ;
+MethodHeaderReferenceTypeTypeParam.                     MethodHeader ::= TypeParameters ClassType MethodDeclarator ;
+MethodHeaderVoidThrows.                                 MethodHeader ::= "void" MethodDeclarator Throws ;
+MethodHeaderPrimitiveTypeThrows.                        MethodHeader ::= PrimitiveType MethodDeclarator Throws ;
+MethodHeaderReferenceTypeThrows.                        MethodHeader ::= ClassType MethodDeclarator Throws ;
+MethodHeaderVoidModifierTypeParam.                      MethodHeader ::= Modifiers TypeParameters "void" MethodDeclarator ;
+MethodHeaderPrimitiveTypeModifierTypeParam.             MethodHeader ::= Modifiers TypeParameters PrimitiveType MethodDeclarator ;
+MethodHeaderReferenceTypeModifierTypeParam.             MethodHeader ::= Modifiers TypeParameters ClassType MethodDeclarator ;
+MethodHeaderVoidTypeParamThrows.                        MethodHeader ::= TypeParameters "void" MethodDeclarator Throws ;
+MethodHeaderPrimitiveTypeTypeParamThrows.               MethodHeader ::= TypeParameters PrimitiveType MethodDeclarator Throws ;
+MethodHeaderReferenceTypeTypeParamThrows.               MethodHeader ::= TypeParameters ClassType MethodDeclarator Throws ;
+MethodHeaderVoidModifierThrows.                         MethodHeader ::= Modifiers "void" MethodDeclarator Throws ;
+MethodHeaderPrimitiveTypeModifierThrows.                MethodHeader ::= Modifiers PrimitiveType MethodDeclarator Throws ;
+MethodHeaderReferenceTypeModifierThrows.                MethodHeader ::= Modifiers ClassType MethodDeclarator Throws ;
+MethodHeaderVoidModifierTypeParamThrows.                MethodHeader ::= Modifiers TypeParameters "void" MethodDeclarator Throws ;
+MethodHeaderPrimitiveTypeModifierTypeParamThrows.       MethodHeader ::= Modifiers TypeParameters PrimitiveType MethodDeclarator Throws ;
+MethodHeaderReferenceTypeModifierTypeParamThrows.       MethodHeader ::= Modifiers TypeParameters ClassType MethodDeclarator Throws ;
+
+{- these are no longer needed
+--ResultTypeGenerics.         ResultType ::= TypeName TypeParameters ;
+ResultTypePrimitive.        ResultType ::= PrimitiveType ;
+ResultTypeVoid.             ResultType ::= "void" ;
+-}
+
+MethodDeclaratorSimple.                 MethodDeclarator ::= Identifier "(" ")" ;
+MethodDeclaratorWithFormalParam.        MethodDeclarator ::= Identifier "(" FormalParameterList ")" ;
+MethodDeclaratorArray.                  MethodDeclarator ::= MethodDeclarator Dims ; --"[" "]" ;
+
+FormalParameterListSingle.              FormalParameterList ::= LastFormalParameter ;
+FormalParameterListMulti.               FormalParameterList ::= FormalParameters "," LastFormalParameter ;
+FormalParametersSingle.                 FormalParameters ::= FormalParameter ;
+FormalParametersMulti.                  FormalParameters ::= FormalParameters "," FormalParameter ;
+FormalParameterReference.               FormalParameter ::= ClassType VariableDeclaratorId ;
+FormalParameterPrimitive.               FormalParameter ::= PrimitiveType VariableDeclaratorId ;
+FormalParameterModifiersReference.      FormalParameter ::= Modifiers ClassType VariableDeclaratorId ;
+FormalParameterModifiersPrimitive.      FormalParameter ::= Modifiers PrimitiveType VariableDeclaratorId ;
+FormalParameterWithAnnotation.          FormalParameter ::= Annotation FormalParameter ;
+
+--separator nonempty FormalParameter "," ;
+
+LastFormalParameterSimple.              LastFormalParameter ::= Modifiers VariableDeclaratorId ;
+LastFormalParameterReference.           LastFormalParameter ::= ClassType "..." VariableDeclaratorId ;
+LastFormalParameterPrimitive.           LastFormalParameter ::= PrimitiveType "..." VariableDeclaratorId ;
+LastFormalParameterModifiersReference.  LastFormalParameter ::= Modifiers ReferenceType "..." VariableDeclaratorId ;
+LastFormalParameterModifiersPrimitive.  LastFormalParameter ::= Modifiers PrimitiveType "..." VariableDeclaratorId ;
+LastFormalParameter.                    LastFormalParameter ::= FormalParameter ;
+
+Throws.                                 Throws ::= "throws" ExceptionTypeList ;
+
+ExceptionTypeListSingle.                ExceptionTypeList ::= ExceptionType ;
+ExceptionTypeListMulti.                 ExceptionTypeList ::= ExceptionTypeList "," ExceptionType ;
+
+ExceptionType.                          ExceptionType ::= ClassType ;
+--ExceptionTypeVariable.                  ExceptionType ::= TypeVariable ;
+
+MethodBody.                             MethodBody ::= Block ;
+MethodBodyEmpty.                        MethodBody ::= ";" ;
+
+InstanceInitializerBlock.               InstanceInitializer ::= Block ;
+StaticInitializer.                      StaticInitializer ::= "static" Block ;
+
+ConstructorDeclarationSimple.           ConstructorDeclaration ::= ConstructorDeclarator ConstructorBody ;
+ConstructorDeclarationModifier.         ConstructorDeclaration ::= Modifiers ConstructorDeclarator ConstructorBody ;
+ConstructorDeclarationThrows.           ConstructorDeclaration ::= ConstructorDeclarator Throws ConstructorBody ;
+ConstructorDeclarationModifierThrows.   ConstructorDeclaration ::= Modifiers ConstructorDeclarator Throws ConstructorBody ;
+ConstructorDeclarationWithAnnotation.   ConstructorDeclaration ::= Annotation ConstructorDeclaration ;
+
+--changed SimpleTypeName to TypeName, should work anyways
+ConstructorDeclaratorSimple.            ConstructorDeclarator ::= TypeName "(" ")" ;
+ConstructorDeclaratorTypeParam.         ConstructorDeclarator ::= TypeParameters TypeName "(" ")" ;
+ConstructorDeclaratorFormalParam.       ConstructorDeclarator ::= TypeName "(" FormalParameterList ")" ;
+ConstructorDeclaratorTypeFormalParam.   ConstructorDeclarator ::= TypeParameters TypeName "(" FormalParameterList ")" ;
+
+ConstructorBodyEmpty.                   ConstructorBody ::= "{" "}" ";" ;
+ConstructorBodyExplicitInvocation.      ConstructorBody ::= "{" ExplicitConstructorInvocation "}" ";" ;
+ConstructorBodyBlockStatement.          ConstructorBody ::= "{" BlockStatements "}" ";" ;
+ConstructorBodyExplicitBlock.           ConstructorBody ::= "{" ExplicitConstructorInvocation BlockStatements "}" ";" ;
+
+ExplicitConstructorInvocationThis.                  ExplicitConstructorInvocation ::= "this" "(" ")" ";" ;
+ExplicitConstructorInvocationThisNonWild.           ExplicitConstructorInvocation ::= NonWildTypeArguments "this" "(" ")" ";" ;
+ExplicitConstructorInvocationThisArgList.           ExplicitConstructorInvocation ::= "this" "(" ArgumentList ")" ";" ;
+ExplicitConstructorInvocationThisNonWildArgList.    ExplicitConstructorInvocation ::= NonWildTypeArguments "this" "(" ArgumentList ")" ";" ;
+ExplicitConstructorInvocationSuper.                 ExplicitConstructorInvocation ::= "super" "(" ")" ";" ;
+ExplicitConstructorInvocationSuperNonWild.          ExplicitConstructorInvocation ::= NonWildTypeArguments "super" "(" ")" ";" ;
+ExplicitConstructorInvocationSuperArgList.          ExplicitConstructorInvocation ::= "super" "(" ArgumentList ")" ";" ;
+ExplicitConstructorInvocationSuperNonWildArgList.   ExplicitConstructorInvocation ::= NonWildTypeArguments "super" "(" ArgumentList ")" ";" ;
+ExplicitConstructorInvocationPrimary.               ExplicitConstructorInvocation ::= Primary "." "super" "(" ")" ";" ; 
+ExplicitConstructorInvocationPrimaryNonWild.        ExplicitConstructorInvocation ::= Primary "." NonWildTypeArguments "super" "(" ")" ";" ;
+ExplicitConstructorInvocationPrimaryArgList.        ExplicitConstructorInvocation ::= Primary "." "super" "(" ArgumentList ")" ";" ;
+ExplicitConstructorInvocationNonWildArgList.        ExplicitConstructorInvocation ::= Primary "." NonWildTypeArguments "super" "(" ArgumentList ")" ";" ;
+
+NonWildTypeArgumentsSimple.               NonWildTypeArguments ::= "<" [ReferenceType] ">" ;
+--NonWildTypeArgumentsRecursive.            NonWildTypeArguments ::= "<" ReferenceType NonWildTypeArguments ">" ;
+
+--ReferenceTypeListSingle.                ReferenceTypeList ::= [ReferenceType] ; 
+--ReferenceTypeListMulti.                 ReferenceTypeList ::= ReferenceTypeList "," ReferenceType ;
+
+separator nonempty ReferenceType "," ;
+
+EnumDeclarationSimple.                  EnumDeclaration ::= "enum" Identifier EnumBody ;
+EnumDeclarationModifier.                EnumDeclaration ::= Modifiers "enum" Identifier EnumBody ;
+EnumDeclarationInterface.               EnumDeclaration ::= "enum" Identifier Interfaces EnumBody ;
+EnumDeclarationModifierInterface.       EnumDeclaration ::= Modifiers "enum" Identifier Interfaces EnumBody ;
+
+EnumBodyEmpty.                          EnumBody ::= "{" "}" ;
+EnumBodyConstants.                      EnumBody ::= "{" EnumConstants "}" ;
+EnumBodyComma.                          EnumBody ::= "{" "," "}" ;
+EnumBodyDeclaration.                    EnumBody ::= "{" EnumBodyDeclarations "}" ;
+EnumBodyConstantsComma.                 EnumBody ::= "{" EnumConstants "," "}" ;
+EnumBodyConstantsDeclaration.           EnumBody ::= "{" EnumConstants EnumBodyDeclarations "}" ;
+EnumBodyCommaDeclaration.               EnumBody ::= "{" "," EnumBodyDeclarations "}" ;
+EnumBodyConstantsCommaDeclaration.      EnumBody ::= "{" EnumConstants "," EnumBodyDeclarations "}" ;
+
+EnumConstantsSingle.                    EnumConstants ::= EnumConstant ;
+EnumConstantsMulti.                     EnumConstants ::= EnumConstants "," EnumConstant ;
+
+EnumConstantEmpty.                      EnumConstant ::= Annotations Identifier ;
+EnumConstantArguments.                  EnumConstant ::= Annotations Identifier Arguments ;
+EnumConstantClassBody.                  EnumConstant ::= Annotations Identifier ClassBody ;
+EnumConstantArgumentsClassBody.         EnumConstant ::= Annotations Identifier Arguments ClassBody ;
+
+ArgumentsEmpty.                         Arguments ::= "(" ")" ;
+ArgumentsArgList.                       Arguments ::= "(" ArgumentList ")" ;
+
+EnumBodyDeclarationsEmpty.              EnumBodyDeclarations ::= ";" ;
+EnumBodyDeclarationsClassBody.          EnumBodyDeclarations ::= ";" ClassBodyDeclarations ;
+
+
+-- Interfaces
+-- http://java.sun.com/docs/books/jls/third_edition/html/interfaces.html
+----------------------------------------------------------------
+
+InterfaceDeclarationNormal.                             InterfaceDeclaration ::= NormalInterfaceDeclaration ;
+InterfaceDeclarationAnnotation.                         InterfaceDeclaration ::= NormalInterfaceDeclarationWithAnnotaion ;
+NormalInterfaceDeclarationWithAnnotaion.                NormalInterfaceDeclarationWithAnnotaion ::= Annotation NormalInterfaceDeclaration ;
+
+NormalInterfaceDeclarationSimple.                       NormalInterfaceDeclaration ::= "interface" Identifier InterfaceBody ;
+NormalInterfaceDeclarationModifiers.                    NormalInterfaceDeclaration ::= Modifiers "interface" Identifier InterfaceBody ;
+NormalInterfaceDeclarationTypeParam.                    NormalInterfaceDeclaration ::= "interface" Identifier TypeParameters InterfaceBody ;
+NormalInterfaceDeclarationExtends.                      NormalInterfaceDeclaration ::= "interface" Identifier ExtendsInterfaces InterfaceBody ;
+NormalInterfaceDeclarationModifiersTypeParam.           NormalInterfaceDeclaration ::= Modifiers "interface" Identifier TypeParameters InterfaceBody ;
+NormalInterfaceDeclarationModifiersExtends.             NormalInterfaceDeclaration ::= Modifiers "interface" Identifier ExtendsInterfaces InterfaceBody ;
+NormalInterfaceDeclarationTypeParamExtends.             NormalInterfaceDeclaration ::= "interface" Identifier TypeParameters ExtendsInterfaces InterfaceBody ;
+NormalInterfaceDeclarationModifiersTypeParamExtends.    NormalInterfaceDeclaration ::= Modifiers "interface" Identifier TypeParameters ExtendsInterfaces InterfaceBody ;
+
+ExtendsInterfacesSingle.            ExtendsInterfaces ::= "extends" InterfaceType ;
+ExtendsInterfacesMulti.             ExtendsInterfaces ::= ExtendsInterfaces "," InterfaceType ;
+
+InterfaceTypeListSingle.    InterfaceTypeList ::= InterfaceType ;
+InterfaceTypeListMulti.     InterfaceTypeList ::= InterfaceTypeList "," InterfaceType ;
+InterfaceTypeSimple.        InterfaceType ::= TypeDeclSpecifier ;
+InterfaceTypeTypeArgs.      InterfaceType ::= TypeDeclSpecifier TypeArguments ;
+
+InterfaceBodyEmpty.                 InterfaceBody ::= "{" "}" ;
+InterfaceBodyMemberDeclaration.     InterfaceBody ::= "{" InterfaceMemberDeclarations "}" ;
+
+InterfaceMemberDeclarationsSingle.  InterfaceMemberDeclarations ::= InterfaceMemberDeclaration ;
+InterfaceMemberDeclarationsMulti.   InterfaceMemberDeclarations ::= InterfaceMemberDeclarations InterfaceMemberDeclaration ;
+
+InterfaceMemberDeclarationConstant.             InterfaceMemberDeclaration ::= ConstantDeclaration ;
+InterfaceMemberDeclarationAbstractMethod.       InterfaceMemberDeclaration ::= AbstractMethodDeclaration ;
+InterfaceMemberDeclarationClass.                InterfaceMemberDeclaration ::= ClassDeclaration ;
+InterfaceMemberDeclarationInterface.            InterfaceMemberDeclaration ::= InterfaceDeclaration ;
+InterfaceMemberDeclarationEmpty.                InterfaceMemberDeclaration ::= ";" ;
+
+ConstantDeclaration.              ConstantDeclaration ::= FieldDeclaration ;
+
+AbstractMethodDeclaration.                      AbstractMethodDeclaration ::= MethodHeader ";" ;
+
+{- i think these rules are not realy needed since they are just MethodHeaders followed by a ;
+AbstractMethodDeclarationSimple.                    AbstractMethodDeclaration ::= ResultType MethodDeclarator ";" ;
+AbstractMethodDeclarationModifiers.                 AbstractMethodDeclaration ::= Modifiers ResultType MethodDeclarator ";" ;
+AbstractMethodDeclarationTypeParam.                 AbstractMethodDeclaration ::= TypeParameters ResultType MethodDeclarator ";" ;
+AbstractMethodDeclarationThrows.                    AbstractMethodDeclaration ::= ResultType MethodDeclarator Throws ";" ;
+AbstractMethodDeclarationModifiersTypeParam.        AbstractMethodDeclaration ::= Modifiers TypeParameters ResultType MethodDeclarator ";" ;
+AbstractMethodDeclarationTypeParamThrows.           AbstractMethodDeclaration ::= TypeParameters ResultType MethodDeclarator Throws ";" ;
+AbstractMethodDeclarationModifiersThrows.           AbstractMethodDeclaration ::= Modifiers ResultType MethodDeclarator Throws ";" ;
+AbstractMethodDeclarationModifiersTypeParamThrows.  AbstractMethodDeclaration ::= Modifiers TypeParameters ResultType MethodDeclarator Throws ";" ;
+AbstractMethodDeclarationWithAnnotation.            AbstractMethodDeclaration ::= Annotation AbstractMethodDeclaration ;
+-}
+
+{-
+ - @@@ These look very usefull but they are not used by any other Rule ... @@@
+ - 
+ - they will be used in the future, as soon as i know how ^^
+
+AnnotationTypeDeclarationSimple.        AnnotationTypeDeclaration ::= "@" "interface" Identifier AnnotationTypeBody ;
+AnnotationTypeDeclarationModifiers.     AnnotationTypeDeclaration ::= InterfaceModifiers "@" "interface" Identifier AnnotationTypeBody ;
+
+AnnotationTypeBodyEmpty.            AnnotationTypeBody ::= "{" "}" ;
+AnnotationTypeBodyDeclaration.      AnnotationTypeBody ::= "{" AnnotationTypeElementDeclarations "}" ;
+
+AnnotationTypeElementDeclarationsSimple.    AnnotationTypeElementDeclarations ::= AnnotationTypeElementDeclaration ;
+AnnotationTypeElementDeclarationsMulti.     AnnotationTypeElementDeclarations ::= AnnotationTypeElementDeclarations AnnotationTypeElementDeclaration ;
+
+AnnotationTypeElementDeclarationSimple.             AnnotationTypeElementDeclaration ::= Type Identifier "(" ")" ";" ;
+AnnotationTypeElementDeclarationModifiers.          AnnotationTypeElementDeclaration ::= AbstractMethodModifiers Type Identifier "(" ")" ";" ;
+AnnotationTypeElementDeclarationDefault.            AnnotationTypeElementDeclaration ::= Type Identifier "(" ")" DefaultValue ";" ;
+AnnotationTypeElementDeclarationModifiersDefault.   AnnotationTypeElementDeclaration ::= AbstractMethodModifiers Type Identifier "(" ")" DefaultValue ";" ;
+
+AnnotationTypeElementDeclarationConstant.           AnnotationTypeElementDeclaration ::= ConstantDeclaration ;
+AnnotationTypeElementDeclarationClass.              AnnotationTypeElementDeclaration ::= ClassDeclaration ;
+AnnotationTypeElementDeclarationInterface.          AnnotationTypeElementDeclaration ::= InterfaceDeclaration ;
+AnnotationTypeElementDeclarationEnum.               AnnotationTypeElementDeclaration ::= EnumDeclaration ;
+AnnotationTypeElementDeclarationAnnotation.         AnnotationTypeElementDeclaration ::= AnnotationTypeDeclaration ;
+AnnotationTypeElementDeclarationEmpty.              AnnotationTypeElementDeclaration ::= ";" ;
+
+DefaultValue.                       DefaultValue ::= "default" ElementValue ;
+-}
+
+AnnotationsMulti.                   Annotations ::= Annotations Annotation ;
+AnnotationsSingle.                  Annotations ::= Annotation ;
+
+AnnotationNormal.                   Annotation ::= NormalAnnotation ;
+AnnotationMarker.                   Annotation ::= MarkerAnnotation ;
+AnnotationSingleElement.            Annotation ::= SingleElementAnnotation ;
+
+NormalAnnotationSimple.             NormalAnnotation ::= "@" TypeName "(" ")" ;
+NormalAnnotationElementValue.       NormalAnnotation ::= "@" TypeName "(" ElementValuePairs ")" ;
+MarkerAnnotation.                   MarkerAnnotation ::= "@" TypeName ;
+SingleElementAnnotation.            SingleElementAnnotation ::= "@" TypeName "(" ElementValue ")" ;
+
+ElementValuePairsSingle.            ElementValuePairs ::= ElementValuePair ;
+ElementValuePairsMulti.             ElementValuePairs ::= ElementValuePairs "," ElementValuePair ;
+
+ElementValuePair.                   ElementValuePair ::= Identifier "=" ElementValue ;
+
+ElementValueConditional.            ElementValue ::= ConditionalExpression ;
+ElementValueAnnotation.             ElementValue ::= Annotation ;
+ElementValueArrayInitializer.       ElementValue ::= ElementValueArrayInitializer ;
+
+ElementValueArrayInitializerEmpty.          ElementValueArrayInitializer ::= "{" "}" ;
+ElementValueArrayInitializerValues.         ElementValueArrayInitializer ::= "{" ElementValues "}" ;
+ElementValueArrayInitializerComma.          ElementValueArrayInitializer ::= "{" "," "}" ;
+ElementValueArrayInitializerValuesComma.    ElementValueArrayInitializer ::= "{" ElementValues "," "}" ;
+
+ElementValuesSingle.                ElementValues ::= ElementValue ;
+ElementValuesMulti.                 ElementValues ::= ElementValues "," ElementValue ;
+
+
+-- Arrays
+-- http://java.sun.com/docs/books/jls/third_edition/html/arrays.html
+----------------------------------------------------------------
+
+ArrayInitializerEmpty.          ArrayInitializer ::= "{" "}" ;
+ArrayInitializerVariables.      ArrayInitializer ::= "{" VariableInitializers "}" ;
+ArrayInitializerComma.          ArrayInitializer ::= "{" "," "}" ;
+ArrayInitializerVariablesComma. ArrayInitializer ::= "{" VariableInitializers "," "}" ;
+
+VariableInitializersSingle.     VariableInitializers ::= VariableInitializer ;
+VariableInitializersMulti.      VariableInitializers ::= VariableInitializers "," VariableInitializer ;
+
+VariableInitializerExpression.  VariableInitializer ::= Expression ;
+VariableInitializerArray.       VariableInitializer ::= ArrayInitializer ;
+
+-- Blocks and Statements
+-- http://java.sun.com/docs/books/jls/third_edition/html/statements.html
+----------------------------------------------------------------
+
+Block.                              Block ::= "{" BlockStatements "}" ;
+BlockEmpty.                         Block ::= "{" "}" ;
+BlockStatementsSingle.              BlockStatements ::= BlockStatement ;
+BlockStatementsMulti.               BlockStatements ::= BlockStatements BlockStatement ;
+BlockStatementVariable.             BlockStatement ::= LocalVariableDeclarationStatement ;
+BlockStatementClass.                BlockStatement ::= ClassDeclaration ;
+BlockStatementStatement.            BlockStatement ::= Statement ;
+
+LocalVariableDeclarationStatement.           LocalVariableDeclarationStatement ::= LocalVariableDeclaration ";" ;
+LocalVariableDeclarationPrimitive.           LocalVariableDeclaration ::= PrimitiveType VariableDeclarators ;
+LocalVariableDeclarationReference.           LocalVariableDeclaration ::= ReferenceType VariableDeclarators ;
+LocalVariableDeclarationPrimitiveModifiers.  LocalVariableDeclaration ::= Modifiers PrimitiveType VariableDeclarators ;
+LocalVariableDeclarationReferenceModifiers.  LocalVariableDeclaration ::= Modifiers ReferenceType VariableDeclarators ;
+
+StatementNoSubstatement.            Statement ::= StatementWithoutTrailingSubstatement ;
+StatementLabeled.                   Statement ::= LabeledStatement ;
+StatementIfThen.                    Statement ::= IfThenStatement ;
+StatementIfThenElse.                Statement ::= IfThenElseStatement ;
+StatementWhile.                     Statement ::= WhileStatement ;
+StatementFor.                       Statement ::= ForStatement ;
+
+NoSubstatementBlock.        StatementWithoutTrailingSubstatement ::= Block ;
+NoSubstatementEmpty.        StatementWithoutTrailingSubstatement ::= EmptyStatement ;
+NoSubstatementExpression.   StatementWithoutTrailingSubstatement ::= ExpressionStatement ;
+NoSubstatementAssert.       StatementWithoutTrailingSubstatement ::= AssertStatement ;
+NoSubstatementSwitch.       StatementWithoutTrailingSubstatement ::= SwitchStatement ;
+NoSubstatementDo.           StatementWithoutTrailingSubstatement ::= DoStatement ;
+NoSubstatementBreak.        StatementWithoutTrailingSubstatement ::= BreakStatement ;
+NoSubstatementContinue.     StatementWithoutTrailingSubstatement ::= ContinueStatement ;
+NoSubstatementReturn.       StatementWithoutTrailingSubstatement ::= ReturnStatement ;
+NoSubstatementSync.         StatementWithoutTrailingSubstatement ::= SynchronizedStatement ;
+NoSubstatementThrow.        StatementWithoutTrailingSubstatement ::= ThrowStatement ;
+NoSubstatementTry.          StatementWithoutTrailingSubstatement ::= TryStatement ;
+
+NoShortIfNoSubstatement.    StatementNoShortIf ::= StatementWithoutTrailingSubstatement ;
+NoShortIfLabeled.           StatementNoShortIf ::= LabeledStatementNoShortIf ;
+NoShortIfIfThenElse.        StatementNoShortIf ::= IfThenElseStatementNoShortIf ;
+NoShortIfWhile.             StatementNoShortIf ::= WhileStatementNoShortIf ;
+NoShortIfFor.               StatementNoShortIf ::= ForStatementNoShortIf ;
+
+IfThenStatement.                IfThenStatement ::= "if" "(" Expression ")" Statement ;
+IfThenElseStatement.            IfThenElseStatement ::= "if" "(" Expression ")" StatementNoShortIf "else" Statement ;
+IfThenElseStatementNoShortIf.   IfThenElseStatementNoShortIf ::= "if" "(" Expression ")" StatementNoShortIf "else" StatementNoShortIf ;
+
+EmptyStatement.                 EmptyStatement ::= ";" ;
+
+--what are these for ?!
+LabeledStatement.               LabeledStatement ::= Identifier ":" Statement ;
+LabeledStatementNoShortIf.      LabeledStatementNoShortIf ::= Identifier ":" StatementNoShortIf ;
+
+ExpressionStatement.                ExpressionStatement ::= StatementExpression ";" ;
+StatementExpressionAssignment.      StatementExpression ::= Assignment ;
+StatementExpressionPreIncrement.    StatementExpression ::= PreIncrementExpression ;
+StatementExpressionPreDecrement.    StatementExpression ::= PreDecrementExpression ;
+StatementExpressionPostIncrement.   StatementExpression ::= PostIncrementExpression ;
+StatementExpressionPostDecrement.   StatementExpression ::= PostDecrementExpression ;
+StatementExpressionMethod.          StatementExpression ::= MethodInvocation ;
+StatementExpressionClass.           StatementExpression ::= ClassInstanceCreationExpression ;
+
+-- originally Expression1 : Expression2 (it shall work anyway ^^)
+AssertStatementOneExpression.       AssertStatement ::= "assert" Expression ";" ;
+AssertStatementTwoExpressions.      AssertStatement ::= "assert" Expression ":" Expression ";" ;
+
+SwitchStatement.                    SwitchStatement ::= "switch" "(" Expression ")" SwitchBlock ;
+SwitchBlockEmpty.                   SwitchBlock ::= "{" "}" ;
+SwitchBlockGroups.                  SwitchBlock ::= "{" SwitchBlockStatementGroups "}" ;
+SwitchBlockLabels.                  SwitchBlock ::= "{" SwitchLabels "}" ;
+SwitchBlockGroupsLabels.            SwitchBlock ::= "{" SwitchBlockStatementGroups SwitchLabels "}" ;
+SwitchBlockStatementGroupsSingle.   SwitchBlockStatementGroups ::= SwitchBlockStatementGroup ;
+SwitchBlockStatementGroupsMulti.    SwitchBlockStatementGroups ::= SwitchBlockStatementGroups SwitchBlockStatementGroup ;
+SwitchBlockStatementGroup.          SwitchBlockStatementGroup ::= SwitchLabels BlockStatements ;
+SwitchLabelsSingel.                 SwitchLabels ::= SwitchLabel ;
+SwitchLabelsMulti.                  SwitchLabels ::= SwitchLabels SwitchLabel ;
+SwitchLabelConstant.                SwitchLabel ::= "case" ConstantExpression ":" ;
+SwitchLabelEnum.                    SwitchLabel ::= "case" EnumConstantName ":" ;
+SwitchLabelDefault.                 SwitchLabel ::= "default" ":" ;
+
+WhileStatement.                     WhileStatement ::= "while" "(" Expression ")" Statement ;
+WhileStatementNoShortIf.            WhileStatementNoShortIf ::= "while" "(" Expression ")" StatementNoShortIf ;
+DoStatement.                        DoStatement ::= "do" Statement "while" "(" Expression ")" ";" ;
+ForStatementBasic.                  ForStatement ::= BasicForStatement ;
+ForStatementEnhanced.               ForStatement ::= EnhancedForStatement ;
+
+-- i'm not sure if all these cases are legal syntax constructs - but its described this way in the JavaLangSpec
+BasicForStatementEmpty.             BasicForStatement ::= "for" "(" ";" ";" ")" Statement ;
+BasicForStatementInit.              BasicForStatement ::= "for" "(" ForInit ";" ";" ")" Statement ;
+BasicForStatementExp.               BasicForStatement ::= "for" "(" ";" Expression ";" ")" Statement ;
+BasicForStatementUpdate.            BasicForStatement ::= "for" "(" ";" ";" ForUpdate ")" Statement ;
+BasicForStatementInitExp.           BasicForStatement ::= "for" "(" ForInit ";" Expression ";" ")" Statement ;
+BasicForStatementInitUpdate.        BasicForStatement ::= "for" "(" ForInit ";" ";" ForUpdate ")" Statement ;
+BasicForStatementExpUpdate.         BasicForStatement ::= "for" "(" ";" Expression ";" ForUpdate ")" Statement ;
+BasicForStatementInitExpUpdate.     BasicForStatement ::= "for" "(" ForInit ";" Expression ";" ForUpdate ")" Statement ;
+
+ForStatementNoShortIfEmpty.         ForStatementNoShortIf ::= "for" "(" ";" ";" ")" StatementNoShortIf ;
+ForStatementNoShortIfInit.          ForStatementNoShortIf ::= "for" "(" ForInit ";" ";" ")" StatementNoShortIf ;
+ForStatementNoShortIfExp.           ForStatementNoShortIf ::= "for" "(" ";" Expression ";" ")" StatementNoShortIf ;
+ForStatementNoShortIfUpdate.        ForStatementNoShortIf ::= "for" "(" ";" ";" ForUpdate ")" StatementNoShortIf ;
+ForStatementNoShortIfInitExp.       ForStatementNoShortIf ::= "for" "(" ForInit ";" Expression ";" ")" StatementNoShortIf ;
+ForStatementNoShortIfInitUpdate.    ForStatementNoShortIf ::= "for" "(" ForInit ";" ";" ForUpdate ")" StatementNoShortIf ;
+ForStatementNoShortIfInitExpUpdate. ForStatementNoShortIf ::= "for" "(" ForInit ";" Expression ";" ForUpdate ")" StatementNoShortIf ;
+
+ForInitExpressionList.              ForInit ::= StatementExpressionList ;
+ForInitLocalVariable.               ForInit ::= LocalVariableDeclaration ;
+ForUpdate.                          ForUpdate ::= StatementExpressionList ;
+
+StatementExpressionListSingle.      StatementExpressionList ::= StatementExpression ;
+StatementExpressionListMulti.       StatementExpressionList ::= StatementExpressionList "," StatementExpression ;
+
+EnhancedForStatementReference.          EnhancedForStatement ::= "for" "(" ReferenceType Identifier ":" Expression")" Statement ;
+EnhancedForStatementPrimitive.          EnhancedForStatement ::= "for" "(" PrimitiveType Identifier ":" Expression")" Statement ;
+EnhancedForStatementReferenceModifier.  EnhancedForStatement ::= "for" "(" Modifiers ReferenceType Identifier ":" Expression")" Statement ;
+EnhancedForStatementPrimitiveModifier.  EnhancedForStatement ::= "for" "(" Modifiers PrimitiveType Identifier ":" Expression")" Statement ;
+
+BreakStatementSimple.           BreakStatement ::= "break" ";" ;
+BreakStatementIdentifier.       BreakStatement ::= "break" Identifier ";" ;
+ContinueStatementSimple.        ContinueStatement ::= "continue" ";" ;
+ContinueStatementIdentifier.    ContinueStatement ::= "continue" Identifier ";" ;
+ReturnStatementSimple.          ReturnStatement ::= "return" ";" ;
+ReturnStatementExpression.      ReturnStatement ::= "return" Expression ";" ;
+
+ThrowStatement.                 ThrowStatement ::= "throw" Expression ";" ;
+
+SynchronizedStatement.          SynchronizedStatement ::= "synchronized" "(" Expression ")" Block ;
+
+TryStatementCatches.            TryStatement ::= "try" Block Catches ;
+TryStatementFinally.            TryStatement ::= "try" Block Finally ;
+TryStatementCatchesFinally.     TryStatement ::= "try" Block Catches Finally ;
+
+CatchesSingle.                  Catches ::= CatchClause ;
+CatchesMulti.                   Catches ::= Catches CatchClause ;
+
+CatchClause.                    CatchClause ::= "catch" "(" FormalParameter ")" Block ;
+
+Finally.                        Finally ::= "finally" Block ;
+
+
+-- Expressions
+-- http://java.sun.com/docs/books/jls/third_edition/html/expressions.html
+----------------------------------------------------------------
+
+PrimaryNoArray.             Primary ::= PrimaryNoNewArray ;
+PrimaryArray.               Primary ::= ArrayCreationExpression ;
+
+PrimaryNoNewArrayLiteral.            PrimaryNoNewArray ::= Literal;
+PrimaryNoNewArrayReferenceClass.     PrimaryNoNewArray ::= Identifier "." "class" ;
+PrimaryNoNewArrayPrimitiveClass.     PrimaryNoNewArray ::= PrimitiveType "." "class" ;
+PrimaryNoNewArrayVoid.               PrimaryNoNewArray ::= "void" "." "class" ;
+PrimaryNoNewArrayThis.               PrimaryNoNewArray ::= "this" ;
+--PrimaryNoNewArrayClassThis.          PrimaryNoNewArray ::= Identifier "." "this" ; --changed ClassName to Identifier
+PrimaryNoNewArrayExpression.         PrimaryNoNewArray ::= "(" Expression ")" ;
+PrimaryNoNewArrayClassInstance.      PrimaryNoNewArray ::= ClassInstanceCreationExpression ;
+PrimaryNoNewArrayLiteralField.       PrimaryNoNewArray ::= FieldAccess ;
+PrimaryNoNewArrayLiteralMethod.      PrimaryNoNewArray ::= MethodInvocation ;
+PrimaryNoNewArrayLiteralArrayAccess. PrimaryNoNewArray ::= ArrayAccess ;
+
+ClassInstanceCreationExpressionSimple.          ClassInstanceCreationExpression ::= "new" ClassOrInterfaceType "(" ")" ;
+ClassInstanceCreationExpressionType.            ClassInstanceCreationExpression ::= "new" TypeArguments ClassOrInterfaceType "(" ")" ;
+ClassInstanceCreationExpressionArgList.         ClassInstanceCreationExpression ::= "new" ClassOrInterfaceType "(" ArgumentList ")" ;
+ClassInstanceCreationExpressionBody.            ClassInstanceCreationExpression ::= "new" ClassOrInterfaceType "(" ")" ClassBody ;
+ClassInstanceCreationExpressionTypeArgList.     ClassInstanceCreationExpression ::= "new" TypeArguments ClassOrInterfaceType "(" ArgumentList ")" ;
+ClassInstanceCreationExpressionTypeBody.        ClassInstanceCreationExpression ::= "new" TypeArguments ClassOrInterfaceType "(" ")" ClassBody ;
+ClassInstanceCreationExpressionArgListBody.     ClassInstanceCreationExpression ::= "new" ClassOrInterfaceType "(" ArgumentList ")" ClassBody ;
+ClassInstanceCreationExpressionTypeArgListBody. ClassInstanceCreationExpression ::= "new" TypeArguments ClassOrInterfaceType "(" ArgumentList ")" ClassBody ;
+
+ClassInstanceCreationExpressionPrimarySimple.          ClassInstanceCreationExpression ::= Primary "." "new" ClassOrInterfaceType "(" ")" ;
+ClassInstanceCreationExpressionPrimaryType.            ClassInstanceCreationExpression ::= Primary "." "new" TypeArguments ClassOrInterfaceType "(" ")" ;
+ClassInstanceCreationExpressionPrimaryArgList.         ClassInstanceCreationExpression ::= Primary "." "new" ClassOrInterfaceType "(" ArgumentList ")" ;
+ClassInstanceCreationExpressionPrimaryBody.            ClassInstanceCreationExpression ::= Primary "." "new" ClassOrInterfaceType "(" ")" ClassBody ;
+ClassInstanceCreationExpressionPrimaryTypeArgList.     ClassInstanceCreationExpression ::= Primary "." "new" TypeArguments ClassOrInterfaceType "(" ArgumentList ")" ;
+ClassInstanceCreationExpressionPrimaryTypeBody.        ClassInstanceCreationExpression ::= Primary "." "new" TypeArguments ClassOrInterfaceType "(" ")" ClassBody ;
+ClassInstanceCreationExpressionPrimaryArgListBody.     ClassInstanceCreationExpression ::= Primary "." "new" ClassOrInterfaceType "(" ArgumentList ")" ClassBody ;
+ClassInstanceCreationExpressionPrimaryTypeArgListBody. ClassInstanceCreationExpression ::= Primary "." "new" TypeArguments ClassOrInterfaceType "(" ArgumentList ")" ClassBody ;
+
+ArgumentListSingle.     ArgumentList ::= Expression ;
+ArgumentListMulti.      ArgumentList ::= ArgumentList "," Expression ;
+
+ArrayCreationExpressionSingleDim.       ArrayCreationExpression ::= "new" PrimitiveType DimExprs ;
+ArrayCreationExpressionMultiDim.        ArrayCreationExpression ::= "new" PrimitiveType DimExprs Dims ;
+ArrayCreationExpressionClassSingleDim.  ArrayCreationExpression ::= "new" ClassOrInterfaceType DimExprs ;
+ArrayCreationExpressionClassMultiDim.   ArrayCreationExpression ::= "new" ClassOrInterfaceType DimExprs Dims ;
+ArrayCreationExpressionPrimitiveInit.   ArrayCreationExpression ::= "new" PrimitiveType Dims ArrayInitializer ;
+ArrayCreationExpressionClassInit.       ArrayCreationExpression ::= "new" ClassOrInterfaceType Dims ArrayInitializer ;
+
+DimExprsSingle.         DimExprs ::= DimExpr ;
+DimExprsMulti.          DimExprs ::= DimExprs DimExpr; 
+DimExpr.                DimExpr ::= "[" Expression "]" ;
+DimsSingle.             Dims ::= "[]" ;
+DimsMulti.              Dims ::= Dims "[]" ;
+
+FieldAccessPrimary.     FieldAccess ::= Primary "." Identifier ;
+FieldAccessSuper.       FieldAccess ::= "super" "." Identifier ;
+FieldAccessClassSuper.  FieldAccess ::= Identifier "." "super" "." Identifier ; --changed ClassName to Identifier
+
+MethodInvocationSimple.                 MethodInvocation ::= MethodName "(" ")" ;
+MethodInvocationArgList.                MethodInvocation ::= MethodName "(" ArgumentList ")" ;
+MethodInvocationType.                   MethodInvocation ::= TypeName "." "<" [ReferenceType] ">" Identifier "(" ")" ;
+MethodInvocationTypeArgList.            MethodInvocation ::= TypeName "." "<" [ReferenceType] ">" Identifier "(" ArgumentList ")" ;
+
+MethodInvocationPrimary.                MethodInvocation ::= Primary "." Identifier "(" ")" ;
+MethodInvocationPrimaryNonWild.         MethodInvocation ::= Primary "." NonWildTypeArguments Identifier "(" ")" ;
+MethodInvocationPrimaryArgList.         MethodInvocation ::= Primary "." Identifier "(" ArgumentList ")" ;
+MethodInvocationPrimaryNonWildArgList.  MethodInvocation ::= Primary "." NonWildTypeArguments Identifier "(" ArgumentList ")" ;
+MethodInvocationSuper.                  MethodInvocation ::= "super" "." Identifier "(" ")" ;
+MethodInvocationSuperNonWild.           MethodInvocation ::= "super" "." NonWildTypeArguments Identifier "(" ")" ;
+MethodInvocationSuperArgList.           MethodInvocation ::= "super" "." Identifier "(" ArgumentList ")" ;
+MethodInvocationSuperNonWildArgList.    MethodInvocation ::= "super" "." NonWildTypeArguments Identifier "(" ArgumentList ")" ;
+
+
+--changed ClassName to Identifier
+MethodInvocationClass.                  MethodInvocation ::= Identifier "." "super" "." Identifier "(" ")" ;
+MethodInvocationClassNonWild.           MethodInvocation ::= Identifier "." "super" "." NonWildTypeArguments Identifier "(" ")" ;
+MethodInvocationClassArgList.           MethodInvocation ::= Identifier "." "super" "." Identifier "(" ArgumentList ")" ;
+MethodInvocationClassNonWildArgList.    MethodInvocation ::= Identifier "." "super" "." NonWildTypeArguments Identifier "(" ArgumentList ")" ;
+
+
+
+ArrayAccessExpression.                  ArrayAccess ::= ExpressionName "[" Expression "]" ;
+ArrayAccessNoNewArray.                  ArrayAccess ::= PrimaryNoNewArray "[" Expression "]" ;
+
+PostfixExpressionPrimary.       PostfixExpression ::= Primary ;
+PostfixExpressionName.          PostfixExpression ::= ReferenceType ; 
+PostfixExpressionPostInc.       PostfixExpression ::= PostIncrementExpression ;
+PostfixExpressionPostDec.       PostfixExpression ::= PostDecrementExpression ;
+
+PostIncrementExpression.        PostIncrementExpression ::= PostfixExpression "++" ;
+PostDecrementExpression.        PostDecrementExpression ::= PostfixExpression "--" ;
+
+UnaryExpressionPreInc.          UnaryExpression ::= PreIncrementExpression ;
+UnaryExpressionPreDec.          UnaryExpression ::= PreDecrementExpression ;
+UnaryExpressionPlus.            UnaryExpression ::= "+" UnaryExpression ;
+UnaryExpressionMinus.           UnaryExpression ::= "-" UnaryExpression ;
+UnaryExpressionOther.           UnaryExpression ::= UnaryExpressionNotPlusMinus ;
+
+PreIncrementExpression.         PreIncrementExpression ::= "++" UnaryExpression ;
+PreDecrementExpression.         PreDecrementExpression ::= "--" UnaryExpression ;
+
+UnaryExpressionNotPlusMinusPostfix.     UnaryExpressionNotPlusMinus ::= PostfixExpression ;
+UnaryExpressionNotPlusMinusTilde.       UnaryExpressionNotPlusMinus ::= "~" UnaryExpression ;
+UnaryExpressionNotPlusMinusNot.         UnaryExpressionNotPlusMinus ::= "!" UnaryExpression ;
+UnaryExpressionNotPlusMinusCast.        UnaryExpressionNotPlusMinus ::= CastExpression ;
+
+CastExpressionSimple.                   CastExpression ::= "(" PrimitiveType ")" UnaryExpression ;
+CastExpressionArray.                    CastExpression ::= "(" PrimitiveType Dims ")" UnaryExpression ;
+CastExpressionReference.                CastExpression ::= "(" ReferenceType ")" UnaryExpressionNotPlusMinus ;
+
+MultiplicativeExpressionUnary.      MultiplicativeExpression ::= UnaryExpression ;
+MultiplicativeExpressionMult.       MultiplicativeExpression ::= MultiplicativeExpression "*" UnaryExpression ;
+MultiplicativeExpressionDiv.        MultiplicativeExpression ::= MultiplicativeExpression "/" UnaryExpression ;
+MultiplicativeExpressionMod.        MultiplicativeExpression ::= MultiplicativeExpression "%" UnaryExpression ;
+
+AdditiveExpressionMult.     AdditiveExpression ::= MultiplicativeExpression ;
+AdditiveExpressionPlus.     AdditiveExpression ::= AdditiveExpression "+" MultiplicativeExpression ;
+AdditiveExpressionMinus.    AdditiveExpression ::= AdditiveExpression "-" MultiplicativeExpression ;
+
+ShiftExpressionAdd.         ShiftExpression ::= AdditiveExpression ;
+ShiftExpressionLeft.        ShiftExpression ::= ShiftExpression "<<" AdditiveExpression ;
+ShiftExpressionRight.       ShiftExpression ::= ShiftExpression ">>" AdditiveExpression ;
+ShiftExpressionUnsignd.     ShiftExpression ::= ShiftExpression ">>>" AdditiveExpression ;
+
+RelationalExpressionShift.          RelationalExpression ::= ShiftExpression ;
+RelationalExpressionLess.           RelationalExpression ::= RelationalExpression "<" ShiftExpression ;
+
+--- workaround for the less-than-expression-bug ---
+RelationalExpressionLessTN.           RelationalExpression ::= TypeName "<" ShiftExpression ;
+RelationalExpressionLessID.           RelationalExpression ::= Identifier "<" ShiftExpression ; --causes 2 r/r conflicts :-(
+---------------------------------------------------
+
+RelationalExpressionGreater.        RelationalExpression ::= RelationalExpression ">" ShiftExpression ;
+RelationalExpressionLessEqual.      RelationalExpression ::= RelationalExpression "<=" ShiftExpression ;
+RelationalExpressionGreaterEqual.   RelationalExpression ::= RelationalExpression ">=" ShiftExpression ;
+RelationalExpressionInstanceOf.     RelationalExpression ::= RelationalExpression "instanceof" ReferenceType ;
+
+EqualityExpressionRelation.         EqualityExpression ::= RelationalExpression ;
+EqualityExpressionEqual.            EqualityExpression ::= EqualityExpression "==" RelationalExpression ;
+EqualityExpressionNotEqual.         EqualityExpression ::= EqualityExpression "!=" RelationalExpression ;
+
+AndExpressionEquality.              AndExpression ::= EqualityExpression ;
+AndExpressionBinary.                AndExpression ::= AndExpression "&" EqualityExpression ;
+
+ExclusiveOrExpressionAnd.           ExclusiveOrExpression ::= AndExpression ;
+ExclusiveOrExpression.              ExclusiveOrExpression ::= ExclusiveOrExpression "^" AndExpression ;
+
+InclusiveOrExpressionExclusive.     InclusiveOrExpression ::= ExclusiveOrExpression ;
+InclusiveOrExpression.              InclusiveOrExpression ::= InclusiveOrExpression "|" ExclusiveOrExpression ;
+
+ConditionalAndExpressionIclusiveOr. ConditionalAndExpression ::= InclusiveOrExpression ;
+ConditionalAndExpression.           ConditionalAndExpression ::= ConditionalAndExpression "&&" InclusiveOrExpression ;
+ConditionalOrExpressionAnd.         ConditionalOrExpression ::= ConditionalAndExpression ;
+ConditionalOrExpression.            ConditionalOrExpression ::= ConditionalOrExpression "||" ConditionalAndExpression ;
+ConditionalExpressionSimple.        ConditionalExpression ::= ConditionalOrExpression ;
+ConditionalExpressionComplex.       ConditionalExpression ::= ConditionalOrExpression "?" Expression ":" ConditionalExpression ;
+
+AssignmentExpressionConditional.    AssignmentExpression ::= ConditionalExpression ;
+AssignmentExpression.               AssignmentExpression ::= Assignment ;
+
+Assignment.                         Assignment ::= LeftHandSide AssignmentExpression ;
+
+LeftHandSideExpression.             LeftHandSide ::= ExpressionName AssignmentOperator;
+LeftHandSideField.                  LeftHandSide ::= FieldAccess AssignmentOperator;
+LeftHandSideArray.                  LeftHandSide ::= ArrayAccess AssignmentOperator;
+
+Expression.                         Expression ::= AssignmentExpression ;
+ConstantExpression.                 ConstantExpression ::= Expression ;
+
+

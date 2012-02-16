@@ -1,0 +1,24 @@
+Name:                bnfc-cabal 
+Version:             0.1
+Synopsis:            Installation tool for your own labelled bnf 
+Description:         cabalBnfc uses bnfc to build haskell modules
+                     for a given labelled grammar. The modules can 
+                     now be easily installed using cabal.
+License:             GPL
+Author:              Pascal Hof
+Maintainer:          Pascal Hof 
+Cabal-Version:       >= 1.6
+Build-Type:          Simple
+Executable bnfc-cabal
+  Hs-Source-Dirs:      src
+  Build-Depends:       base == 4.4.1.0,
+                       filepath >= 1.1.0.2,
+                       directory >= 1.0.0.3,
+                       process >= 1.0.1.1,
+                       Cabal >= 1.8.0.2 ,
+                       parsec == 3.1.2, 
+                       mtl
+                        
+  GHC-Options:         -Wall 
+  Main-Is:             Bnfc-cabal.hs
+
