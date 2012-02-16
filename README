@@ -69,11 +69,9 @@ Language.Mygrammar. We use a grammar named "mygrammar" as a
 running example in this section. In order to use the parser of 
 mygrammar some modules have to be imported:
 
-```haskell
     import Language.Mygrammar.Parmygrammar
     import Language.Mygrammar.Absmygrammar
     import Language.Mygrammar.ErrM
-```
 
 Module ErrM contains a error monad to handle parse errors. 
 Absmygrammar offers data types to represent parsed data in haskell.
