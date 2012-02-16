@@ -16,7 +16,7 @@ compiler front-end from a labeled BNF grammar. It is currently
  
 Further informations and sources can be found at:
 
-   http://code.haskell.org/bnfc/ 
+http://www.cse.chalmers.se/research/group/Language-technology/BNFC/
 
 Bnfc has to be installed in order to use cabalbnfc.
 
@@ -39,23 +39,16 @@ CabalBnfc can be installed using
 
 1. Create a labeled grammar like "mygrammar.cf" 
 
-2. Launch 
-         > cabalBnfc mygrammar.cf 
+2. Launch `cabalBnfc mygrammar.cf`
   
-3. Type 
-         > cabal install 
-in order to install the bnfc modules
-
+3. Type `cabal install` in order to install the bnfc modules
 
 ## 3.2) Example: How to build the c grammar?
     
 1. Grammar "Examples/c.cf" is already existing
 2. Chane to directory Examples 
-3. Type 
-         > cabalBnfc c.cf
-to build a cabal file for c grammar
-4. To install grammar type 
-         > cabal install 
+3. Type `cabalBnfc c.cf` to build a cabal file for c grammar
+4. To install grammar type `cabal install` 
     
 See Section (3.3) how to use installed modules
 
