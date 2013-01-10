@@ -9,9 +9,9 @@ Author:              Pascal Hof
 Maintainer:          Pascal Hof 
 Cabal-Version:       >= 1.6
 Build-Type:          Simple
-Executable bnfc-cabal
+Executable bnfcCabal
   Hs-Source-Dirs:      src
-  Build-Depends:       base == 4.4.1.0,
+  Build-Depends:       base < 5,
                        filepath >= 1.1.0.2,
                        directory >= 1.0.0.3,
                        process >= 1.0.1.1,

@@ -119,7 +119,6 @@ updatePd config lang p = p
     ]
   , buildDepends = 
     [ Dependency (PackageName "base") (laterVersion $ Version [4] []) 
-    , Dependency (PackageName "haskell98") anyVersion
     , Dependency (PackageName "containers") anyVersion
     , Dependency (PackageName "array") anyVersion 
     ]
