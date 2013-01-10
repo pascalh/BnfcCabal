@@ -1,4 +1,3 @@
-
 # 1) Introduction
 
 ## 1.1) BNF Converter
@@ -58,10 +57,11 @@ The modules of a grammar "mygrammar" can be found at
 Language.Mygrammar. We use a grammar named "mygrammar" as a 
 running example in this section. In order to use the parser of 
 mygrammar some modules have to be imported:
-
-    import Language.Mygrammar.Parmygrammar
-    import Language.Mygrammar.Absmygrammar
-    import Language.Mygrammar.ErrM
+```Haskell
+import Language.Mygrammar.Parmygrammar
+import Language.Mygrammar.Absmygrammar
+import Language.Mygrammar.ErrM
+```
 
 Module `ErrM` contains a error monad to handle parse errors. 
 `Absmygrammar` offers types for the abstract syntax.
@@ -69,9 +69,9 @@ Module `Parmygrammar` contains lexer and parse functions. The lexer
 function is always named `myLexer`, but the parsing function is named
 after the root of your grammar. Assume data type `Myroot` is the root of
  mygrammar. The function
-
-    (pMyroot . myLexer) :: String -> Err Root
-
+```Haskell 
+(pMyroot . myLexer) :: String -> Err Root
+```
 is the correct parsing function for mygrammar. Have a look at module
 `Language.Mygrammar.ErrM` to get an impression of the error monad.
 
