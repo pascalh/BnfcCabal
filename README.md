@@ -47,7 +47,7 @@ cabal install bnfcCabal
 ## 3.2) Example: How to build the c grammar?
     
 1. Grammar `Examples/c.cf` is already existing
-2. Chane to directory `Examples` 
+2. Change to directory `Examples` 
 3. Type `bnfcCabal c.cf` to build a cabal file for c grammar
 4. To install grammar type `cabal install` 
     
@@ -67,7 +67,7 @@ import Language.Mygrammar.ErrM
 
 Module `ErrM` contains a error monad to handle parse errors, whereas `Absmygrammar` contains the abstract syntax.
 The module `Parmygrammar` contains lexer and parse functions. The lexer 
-function is always `myLexer`, but the parsing function is named
+function is always called `myLexer`, but the parsing function is named
 after the root of your grammar. Assume data type `Myroot` is the root of
  `mygrammar`. The function
 ```Haskell 
