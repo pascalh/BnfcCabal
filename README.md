@@ -28,13 +28,10 @@ produces.
 
 # 2) Installing BnfcCabal
 
-The preferred way to install BnfcCabal is to clone this repository
-install it manually:
+BnfcCabal can be installed using 
 
 ```Bash
-git clone https://github.com/pascalh/BnfcCabal.git
-cd BnfcCabal
-cabal install 
+cabal install bnfcCabal
 ```
 
 # 3) Using BnfcCabal
