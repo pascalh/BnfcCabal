@@ -7,40 +7,28 @@ Example:  Parsing a list of integers:
  -}
 module Parser (parseIntList) where
 import Prelude hiding (readList)
-import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec hiding (Parser)
 import Control.Applicative hiding ((<|>))
 
 -- |parse function for integer lists
 parseIntList :: String -> Either ParseError [Int]
-parseIntList = 
-  readList (read::String->Int) (list (some digit)) . filter (/=' ')
+parseIntList s = map read <$> runParser (list (some digit)) () [] s 
 
--- |parses a list in haskells list syntax
-readList
-  :: (a -> b) -- ^ how to transform one token of input list to destination type 
-  -> GenParser c () [a] -- ^ parser
-  -> [c]                -- ^ input token list
-  -> Either ParseError [b]
-readList r p s = 
-  case runParser p () [] s of
-    Right xs -> Right $ map r xs
-    Left e   -> Left e 
+type Parser a = GenParser Char () a
 
--- |parsers accepting braces
-lBrace, rBrace :: GenParser Char st Char 
-lBrace = char '['
-rBrace = char ']'
+braced ::  Parser t -> Parser t
+braced = between (char '[') (char ']') 
 
 -- |parses a list of elements. 
-list :: GenParser Char st t  -- ^ the element parser
-     -> GenParser Char st [t] 
-list p = try ([] <$ lBrace <* rBrace) 
-     <|> lBrace *> innerList p <* rBrace 
+list :: Parser t  -- ^ the element parser
+     -> Parser [t] 
+list p = try (braced  (return []) )
+     <|> braced (innerList p)
 
 -- |parses a sequence of elements separated by comma 
 -- (without surrounding brackets)
-innerList :: GenParser Char st t  -- ^ the element parser
-          -> GenParser Char st [t]
+innerList :: Parser t  -- ^ the element parser
+          -> Parser [t]
 innerList pElement = 
       try ((:) <$> (pElement <* char ',') <*> innerList pElement)
   <|> (return <$> pElement)
