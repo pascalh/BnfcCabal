@@ -23,8 +23,7 @@ Bnfc has to be installed in order to use bnfcCabal.
 
 BnfcCabal is a cabal file creating tool for labeled BNF grammars of 
 file extension *.cf. BnfcCabal runs bnfc on a given labeled grammar
-and automatically builds a cabal file containing all modules bnfc 
-produces. 
+and automatically builds a cabal file containing all modules created by bnfc. 
 
 # 2) Installing BnfcCabal
 
@@ -35,6 +34,8 @@ cabal install bnfcCabal
 ```
 
 # 3) Using BnfcCabal
+
+Before using BnfcCabal ensure the executable `bnfc` can be found in system PATH.
 
 ## 3.1) How to build a cabal file for your own grammar
 
