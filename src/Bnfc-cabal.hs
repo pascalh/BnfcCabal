@@ -62,7 +62,7 @@ main = do
 writePackageDesc :: FilePath -> Config -> IO ()
 writePackageDesc file config =
   let lang = dropExtension file in do
-    _ <- runBnfc (cBnfc config) lang
+    runBnfc (cBnfc config) lang
     writePackageDescription 
       ("language-"++lang++".cabal")   
       (updatePd config lang emptyPackageDescription) 
@@ -72,7 +72,7 @@ runBnfc :: FilePath -> Language -> IO ()
 runBnfc bnfc lang = do
   run <- rawSystem bnfc
               [ "-p" , "Language."++toUpperFirst lang
-              , "-data" , lang++".cf"
+              , "-haskell" , lang++".cf"
               ]
   case run of 
     ExitSuccess   -> return ()
