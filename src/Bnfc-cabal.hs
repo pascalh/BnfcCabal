@@ -114,19 +114,22 @@ updatePd config lang p = p
       , libBuildInfo = emptyBuildInfo 
           { buildable    = True
           , hsSourceDirs = ["."]
+          , targetBuildDepends = dependencies
           }
       }
   , extraSrcFiles = 
     [ "Language/"++toUpperFirst lang++"/Par"++lang++".y"
     , "Language/"++toUpperFirst lang++"/Lex"++lang++".x"
     ]
-  , buildDepends = 
+  , buildType = Just Simple
+   }
+
+dependencies :: [Dependency]
+dependencies = 
     [ Dependency (PackageName "base") (laterVersion $ Version [4] []) 
     , Dependency (PackageName "containers") anyVersion
     , Dependency (PackageName "array") anyVersion 
     ]
-  , buildType = Just Simple
-   }
 
 -- |returns a list of all exposed modules for a given language
 exposedMods :: Language -> [ModuleName]
