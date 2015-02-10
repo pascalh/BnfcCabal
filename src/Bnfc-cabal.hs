@@ -107,6 +107,9 @@ updatePd config lang p = p
   , library = 
     Just Library 
       { exposedModules = exposedMods lang
+      , reexportedModules = []
+      , requiredSignatures = []
+      , exposedSignatures = []
       , libExposed = True
       , libBuildInfo = emptyBuildInfo 
           { buildable    = True
