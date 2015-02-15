@@ -2,16 +2,15 @@
 module Main (main) where
 import Prelude hiding (mod)
 import Data.Char (toUpper)
-import Data.Maybe (fromMaybe,catMaybes)
+import Data.Maybe (fromMaybe)
 import Control.Monad(liftM)
 import Control.Exception(Exception,throw)
 import Data.Data(Typeable)
 
 import Distribution.Simple hiding (Language)
 import Distribution.PackageDescription.Parse (writePackageDescription)
-import Distribution.ModuleName(ModuleName)
+import Distribution.ModuleName(ModuleName,fromString)
 import Distribution.PackageDescription
-import Distribution.Text (simpleParse)
 
 import System.Process(rawSystem)
 import System.FilePath(dropExtension)
@@ -120,10 +119,10 @@ dependencies =
 
 -- |returns a list of all exposed modules for a given language
 exposedMods :: Language -> [ModuleName]
-exposedMods lang = catMaybes $
-  (simpleParse $ "Language."++toUpperFirst lang++".ErrM")
+exposedMods lang =
+  fromString ("Language."++toUpperFirst lang++".ErrM")
   : map
-      (simpleParse . makemod lang)
+      (makemod lang)
       ["Abs"
       ,"Par"
       ,"Print"
@@ -133,8 +132,9 @@ exposedMods lang = catMaybes $
 -- |given a language and a modulename 'makemod' builds a
 -- new module name based on the language
 -- > makemod "C" "Abs" ==> "Language.C.Absc"
-makemod :: Language -> String -> String
-makemod lang mod = "Language." ++ toUpperFirst lang ++ "." ++ mod ++ lang
+makemod :: Language -> String -> ModuleName
+makemod lang mod = fromString $
+  "Language." ++ toUpperFirst lang ++ "." ++ mod ++ lang
 
 -- |capitalizes the first character of a string
 toUpperFirst :: String -> String
