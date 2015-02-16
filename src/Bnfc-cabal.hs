@@ -18,7 +18,7 @@ import System.Directory (findExecutable)
 import System.Environment (getArgs)
 import System.Exit (ExitCode(..))
 
--- |a datatype for possibles runtime error
+-- |a datatype for possible runtime errors
 data BnfcCabalErr
   = BnfcExeNotFoundOnPath       -- ^ Bnfc executable can not be found
   | BnfcError                   -- ^ Bnfc failed to run
@@ -28,7 +28,7 @@ data BnfcCabalErr
 instance Show BnfcCabalErr where
   show BnfcExeNotFoundOnPath = "Bnfc executable cannot be found on path."
   show NumberOfArgs  =
-    "exactly one command line argument expected (labelled grammar file)."
+    "Exactly one grammar file expected."
   show BnfcError = "A bnfc error occured."
 
 instance Exception BnfcCabalErr
@@ -57,16 +57,16 @@ writePackageDesc file config =
     runBnfc (cBnfc config) lang
     writePackageDescription
       ("language-"++lang++".cabal")
-      (updatePd lang emptyPackageDescription)
+      (buildPackageDescription lang)
 
--- |runs bnfc on file @lang@.cf
+-- |runs bnfc on file
 runBnfc :: FilePath -> Language -> IO ()
 runBnfc bnfc lang = do
-  run <- rawSystem bnfc
+  result <- rawSystem bnfc
               [ "-p" , "Language."++toUpperFirst lang
               , "-haskell" , lang++".cf"
               ]
-  case run of
+  case result of
     ExitSuccess   -> return ()
     ExitFailure _ -> throw BnfcError
 
@@ -83,9 +83,8 @@ findBnfc =
 
 -- * building the package description
 
--- |adds modules to skeleton package description
-updatePd :: Language -> PackageDescription -> PackageDescription
-updatePd lang p = p
+buildPackageDescription :: Language -> PackageDescription
+buildPackageDescription lang = emptyPackageDescription
   { package =
     PackageIdentifier
       { pkgName = PackageName ("language-"++lang)
@@ -129,8 +128,8 @@ exposedMods lang =
       ,"Lex"
       ]
 
--- |given a language and a modulename 'makemod' builds a
--- new module name based on the language
+-- |given a language name and a base module name 'makemod' builds a
+-- composed module name
 -- > makemod "C" "Abs" ==> "Language.C.Absc"
 makemod :: Language -> String -> ModuleName
 makemod lang mod = fromString $
