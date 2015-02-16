@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+
 module Main (main) where
 import Prelude hiding (mod)
 import Data.Char (toUpper)

@@ -21,3 +21,4 @@ Executable bnfcCabal
 
   GHC-Options:         -Wall
   Main-Is:             Bnfc-cabal.hs
+  extensions:          DeriveDataTypeable
