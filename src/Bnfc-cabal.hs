@@ -53,7 +53,7 @@ main = do
 -- |runs bnfc on cf file and writes package description to current directory
 writePackageDesc :: FilePath -> Config -> IO ()
 writePackageDesc file config =
-  let lang = dropExtension file in do
+  let lang = filter (/=' ') (dropExtension file) in do
     runBnfc (cBnfc config) lang
     writePackageDescription
       ("language-"++lang++".cabal")
